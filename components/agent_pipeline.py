@@ -16,7 +16,7 @@ def agent_pipeline(query: str,test=0):
     graph_builder.add_edge(START, "query_generator")
     graph_builder.add_edge("query_generator", "query_executor")
     graph_builder.add_edge("query_executor", "response_generator")
-    graph_builder.add_edge("query_executor", END)
+    graph_builder.add_edge("response_generator", END)
 
     graph = graph_builder.compile()
     query = {"messages": [HumanMessage(query)]}
@@ -26,11 +26,10 @@ def agent_pipeline(query: str,test=0):
         for key, value in output.items():
             if test==1:
                 pprint(f"Output from node '{key}':")
-                pprint(value["messages"][-1])
+                pprint(value)
             final_state = value
         if test == 1:
             pprint("------")
 
-    messages = final_state["messages"]
-    final_message = messages[-1]
-    return final_message
+
+    return final_state["response"]
