@@ -31,14 +31,24 @@ class QueryOutput(TypedDict):
 
 
 def query_generator(state):
-    prompt = PromptTemplate.from_template("""Given an input question, create a syntactically correct {dialect} query to run to help find the answer."
-              "Unless the user specifies in his question a specific number of examples they wish to obtain, always limit your query to at most {top_k} results."
-              "You can order the results by a relevant column to return the most interesting examples in the database."
-              "Never query for all the columns from a specific table, only ask for a the few relevant columns given the question."
-              "Pay attention to use only the column names that you can see in the schema description."
-              "Be careful to not query for columns that do not exist."
-              "Also, pay attention to which column is in which table.)Only use the following tables:{table_info}"
-              "Question: {input}""")
+    prompt = PromptTemplate.from_template("""You are a helpful assistant that converts natural language questions into syntactically correct and relevant {dialect} SQL queries.
+
+Given the user's question and the database schema, generate a query that can answer the question effectively.
+
+Guidelines:
+- Only use the table and column names provided in the schema below.
+- Never query for all columns (e.g., SELECT *); instead, select only the most relevant columns for the question.
+- If the question does not specify a number of results, limit the query to the top {top_k} results.
+- If appropriate, order the results by a meaningful column to return the most informative data.
+- Do not reference columns or tables that are not included in the schema.
+- Ensure that the syntax is valid for the {dialect} dialect.
+- Only use the following tables and schema:  
+  {table_info}
+
+User Question:
+{input}
+
+Generate only the SQL query. Do not include any explanation.""")
 
     prompt=prompt.format(table_info=db.get_table_info(),top_k=5,dialect=db.dialect,input = state["messages"])
 
@@ -59,18 +69,18 @@ def query_executor(state):
 
 def response_generator(state):
 
-    state["query"]='SELECT COUNT(*) FROM Employee'
-    state["messages"]="How many employees are there?"
 
-    #print(state["result"],
-    #      state["query"],
-    #      state["messages"])
     prompt = PromptTemplate.from_template("""
-    Given the following user question, corresponding SQL query,
-        and SQL result, answer the user question.
-        Question: {messages}
-        SQL Query: {query}
-        SQL Result: {result}""")
+    You are an intelligent assistant tasked with interpreting the result of a SQL query.
+
+Based on the user's original question, the SQL query that was generated, 
+and the result returned from the database, provide a clear and helpful answer.
+
+- User Question: {messages}
+- Generated SQL Query: {query}
+- SQL Result Table: {result}
+
+Please respond with a concise and user-friendly explanation that directly addresses the user's question.""")
 
     response=prompt.format(result=state["result"],query=state["query"],messages=state["messages"])
     response = llm.invoke(response)
